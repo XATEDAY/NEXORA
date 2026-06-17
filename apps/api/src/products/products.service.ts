@@ -3,7 +3,7 @@ import { ProductStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { CreateProductVariantDto } from './dto/create-product-variant.dto';
-import { dot } from 'node:test/reporters';
+import { UpdateProductVariantStockDto } from './dto/update-product-variant-stock.dto';
 
 @Injectable()
 export class ProductsService {
@@ -11,7 +11,7 @@ export class ProductsService {
 
     async create(createProductDto: CreateProductDto) {
         const category = await this.prisma.category.findFirst({
-        where: {
+            where: {
                 id: createProductDto.categoryId,
                 isActive: true,
             },
@@ -22,7 +22,7 @@ export class ProductsService {
         }
 
         const productWithSameSlug = await this.prisma.product.findUnique({
-        where: {
+            where: {
                 slug: createProductDto.slug,
             },
         });
@@ -31,7 +31,7 @@ export class ProductsService {
             throw new ConflictException('Product slug already exists');
         }
 
-        return this.prisma.product.create({
+    return this.prisma.product.create({
         data: {
             name: createProductDto.name,
             slug: createProductDto.slug,
@@ -41,7 +41,7 @@ export class ProductsService {
             status: createProductDto.status ?? ProductStatus.DRAFT,
             isFeatured: createProductDto.isFeatured ?? false,
             publishedAt:
-            createProductDto.status === ProductStatus.PUBLISHED ? new Date() : null,
+                createProductDto.status === ProductStatus.PUBLISHED ? new Date() : null,
             categoryId: createProductDto.categoryId,
         },
         include: {
@@ -57,7 +57,7 @@ export class ProductsService {
         });
     }
 
-    async createVariant(productId: string, dto: CreateProductVariantDto){
+    async createVariant(productId: string, dto: CreateProductVariantDto) {
         const product = await this.prisma.product.findFirst({
             where: {
                 id: productId,
@@ -67,7 +67,7 @@ export class ProductsService {
             },
         });
 
-        if(!product){
+        if (!product) {
             throw new NotFoundException('Product not found or archived');
         }
 
@@ -78,7 +78,7 @@ export class ProductsService {
             },
         });
 
-        if(!size){
+        if (!size) {
             throw new NotFoundException('Size not found or inactive');
         }
 
@@ -89,7 +89,7 @@ export class ProductsService {
             },
         });
 
-        if(!color){
+        if (!color) {
             throw new NotFoundException('Color not found or inactive');
         }
 
@@ -101,20 +101,51 @@ export class ProductsService {
             },
         });
 
-        if(existingVariant){
+        if (existingVariant) {
             throw new ConflictException('Product variant already exists');
         }
 
         return this.prisma.productVariant.create({
+        data: {
+            productId,
+            sku: dto.sku,
+            stock: dto.stock,
+            lowStockThreshold: dto.lowStockThreshold ?? 5,
+            price: dto.price,
+            isActive: dto.isActive ?? true,
+            sizeId: dto.sizeId,
+            colorId: dto.colorId,
+        },
+        include: {
+            product: true,
+            size: true,
+            color: true,
+        },
+        });
+    }
+
+    async updateVariantStock(
+        variantId: string,
+        dto: UpdateProductVariantStockDto,
+    ) {
+        const variant = await this.prisma.productVariant.findFirst({
+            where: {
+                id: variantId,
+                isActive: true,
+            },
+        });
+
+        if (!variant) {
+            throw new NotFoundException('Product variant not found or inactive');
+        }
+
+        return this.prisma.productVariant.update({
+            where: {
+                id: variantId,
+            },
             data: {
-                productId,
-                sku: dto.sku,
                 stock: dto.stock,
-                lowStockThreshold: dto.lowStockThreshold,
-                price: dto.price,
-                isActive: dto.isActive ?? true,
-                sizeId: dto.sizeId,
-                colorId: dto.colorId,
+                lowStockThreshold: dto.lowStockThreshold ?? variant.lowStockThreshold,
             },
             include: {
                 product: true,
@@ -126,34 +157,34 @@ export class ProductsService {
 
     findAll() {
         return this.prisma.product.findMany({
-        where: {
-            status: {
-                not: ProductStatus.ARCHIVED,
-            },
-        },
-        include: {
-            category: true,
-            images: {
-                where: {
-                    isActive: true,
-                },
-                orderBy: {
-                    position: 'asc',
+            where: {
+                status: {
+                    not: ProductStatus.ARCHIVED,
                 },
             },
-            variants: {
-                where: {
-                    isActive: true,
+            include: {
+                category: true,
+                images: {
+                    where: {
+                        isActive: true,
+                    },
+                    orderBy: {
+                        position: 'asc',
+                    },
                 },
-                include: {
-                    size: true,
-                    color: true,
+                variants: {
+                    where: {
+                        isActive: true,
+                    },
+                    include: {
+                        size: true,
+                        color: true,
+                    },
                 },
             },
-        },
-        orderBy: {
-            createdAt: 'desc',
-        },
+            orderBy: {
+                createdAt: 'desc',
+            },
         });
     }
 }
