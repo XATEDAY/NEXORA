@@ -5,6 +5,7 @@ import { CreateProductDto } from './dto/create-product.dto';
 import { CreateProductVariantDto } from './dto/create-product-variant.dto';
 import { UpdateProductVariantStockDto } from './dto/update-product-variant-stock.dto';
 import { CreateProductImageDto } from './dto/create-product-image.dto';
+import { FindProductsQueryDto } from './dto/find-products-query.dto';
 
 @Injectable()
 export class ProductsService {
@@ -231,32 +232,78 @@ export class ProductsService {
         });
     }
 
-    findAll() {
+    findAll(query: FindProductsQueryDto) {
         return this.prisma.product.findMany({
             where: {
                 status: {
                     not: ProductStatus.ARCHIVED,
                 },
+                ...(query.featured !== undefined && {
+                    isFeatured: query.featured,
+                }),
+                ...(query.category && {
+                    category: {
+                        slug: query.category,
+                        isActive: true,
+                    },
+                }),
+                ...(query.minPrice !== undefined || query.maxPrice !== undefined
+                    ? {
+                        basePrice: {
+                            ...(query.minPrice !== undefined && { gte: query.minPrice }),
+                            ...(query.maxPrice !== undefined && { lte: query.maxPrice }),
+                        },
+                    }
+                : {}),
+                ...(query.size || query.color || query.available !== undefined
+                    ? {
+                        variants: {
+                            some: {
+                                isActive: true,
+                                ...(query.available === true && {
+                                    stock: {
+                                    gt: 0,
+                                    },
+                                }),
+                                ...(query.available === false && {
+                                    stock: 0,
+                                }),
+                                ...(query.size && {
+                                    size: {
+                                        value: query.size,
+                                        isActive: true,
+                                    },
+                                }),
+                                ...(query.color && {
+                                    color: {
+                                        value: query.color,
+                                        isActive: true,
+                                    },    
+                                }),
+                            },
+                        },
+                    }
+                : {}),
             },
             include: {
                 category: true,
-                images: {
-                    where: {
-                        isActive: true,
+                    images: {
+                        where: {
+                            isActive: true,
+                        },
+                        orderBy: {
+                            position: 'asc',
+                        },
                     },
-                    orderBy: {
-                        position: 'asc',
+                    variants: {
+                        where: {
+                            isActive: true,
+                        },
+                        include: {
+                            size: true,
+                            color: true,
+                        },
                     },
-                },
-                variants: {
-                    where: {
-                        isActive: true,
-                    },
-                    include: {
-                        size: true,
-                        color: true,
-                    },
-                },
             },
             orderBy: {
                 createdAt: 'desc',
