@@ -25,6 +25,11 @@ export class ProductsController {
         return this.productsService.findAll();
     }
 
+    @Get(':slug')
+    findBySlug(@Param('slug') slug: string){
+        return this.productsService.findBySlug(slug);
+    }
+
     @Patch('variants/:id/stock')
     updateVariantStock(
         @Param('id') variantId: string,

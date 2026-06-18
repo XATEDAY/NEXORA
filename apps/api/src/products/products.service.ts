@@ -155,6 +155,43 @@ export class ProductsService {
         });
     }
 
+    async findBySlug(slug: string){
+        const product = await this.prisma.product.findFirst({
+            where: {
+                slug,
+                status: {
+                    not: ProductStatus.ARCHIVED,
+                },
+            },
+            include: {
+                category: true,
+                images: {
+                    where: {
+                        isActive: true,
+                    },
+                    orderBy: {
+                        position: 'asc',
+                    },
+                },
+                variants: {
+                    where: {
+                        isActive: true,
+                    },
+                    include: {
+                        size: true,
+                        color: true,
+                    },
+                },
+            },
+        });
+
+        if(!product){
+            throw new NotFoundException('Product not found');
+        }
+
+        return product;
+    }
+
     findAll() {
         return this.prisma.product.findMany({
             where: {
