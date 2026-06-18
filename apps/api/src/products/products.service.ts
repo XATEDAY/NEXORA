@@ -339,6 +339,62 @@ export class ProductsService {
         };
     }
 
+    async archive(productId: string) {
+        const product = await this.prisma.product.findFirst({
+            where: {
+                id: productId,
+                    status: {
+                        not: ProductStatus.ARCHIVED,
+                    },
+            },
+        });
+
+        if (!product) {
+            throw new NotFoundException('Product not found or already archived');
+        }
+
+        return this.prisma.product.update({
+            where: {
+                id: productId,
+            },
+            data: {
+                status: ProductStatus.ARCHIVED,
+            },
+            include: {
+                category: true,
+                images: true,
+                    variants: {
+                        include: {
+                            size: true,
+                            color: true,
+                        },
+                    },
+            },
+        });
+    }
+
+    getLowStockVariants() {
+        return this.prisma.productVariant.findMany({
+            where: {
+                isActive: true,
+                    stock: {
+                        lte: this.prisma.productVariant.fields.lowStockThreshold,
+                    },
+                    product: {
+                        status: ProductStatus.PUBLISHED,
+                    },
+            },
+            include: {
+                product: true,
+                size: true,
+                color: true,
+            },
+            orderBy: {
+                stock: 'asc',
+            },
+        });
+    }
+
     findAll(query: FindProductsQueryDto) {
         return this.prisma.product.findMany({
             where: {

@@ -31,6 +31,12 @@ export class ProductsController {
         return this.productsService.createImage(productId, CreateProductImageDto);
     }
 
+    
+    @Patch(':id/archive')
+    archive(@Param('id') productId: string) {
+        return this.productsService.archive(productId);
+    }
+
     @Get()
     findAll(@Query() query: FindProductsQueryDto) {
         return this.productsService.findAll(query);
@@ -39,6 +45,11 @@ export class ProductsController {
     @Get('facets')
     getFacets() {
         return this.productsService.getFacets();
+    }
+
+    @Get('admin/low-stock')
+    getLowStockVariants() {
+        return this.productsService.getLowStockVariants();
     }
 
     @Get(':slug')
