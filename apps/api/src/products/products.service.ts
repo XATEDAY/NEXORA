@@ -232,6 +232,113 @@ export class ProductsService {
         });
     }
 
+    async getFacets() {
+    const [categories, sizes, colors, priceRange] = await Promise.all([
+        this.prisma.category.findMany({
+            where: {
+                isActive: true,
+                    products: {
+                        some: {
+                            status: ProductStatus.PUBLISHED,
+                        },
+                    },
+            },
+            select: {
+                id: true,
+                name: true,
+                slug: true,
+                    _count: {
+                        select: {
+                            products: true,
+                        },
+                    },
+            },
+            orderBy: {
+                name: 'asc',
+            },
+        }),
+
+        this.prisma.size.findMany({
+            where: {
+                isActive: true,
+                    variants: {
+                        some: {
+                            isActive: true,
+                                stock: {
+                                    gt: 0,
+                                },
+                                product: {
+                                    status: ProductStatus.PUBLISHED,
+                                },
+                        },
+                    },
+            },
+            select: {
+                id: true,
+                name: true,
+                value: true,
+                sortOrder: true,
+            },
+            orderBy: {
+                sortOrder: 'asc',
+            },
+        }),
+
+        this.prisma.color.findMany({
+            where: {
+                isActive: true,
+                    variants: {
+                        some: {
+                            isActive: true,
+                                stock: {
+                                    gt: 0,
+                                },
+                                product: {
+                                    status: ProductStatus.PUBLISHED,
+                                },
+                        },
+                    },
+            },
+            select: {
+                id: true,
+                name: true,
+                value: true,
+                hexCode: true,
+            },
+            orderBy: {
+                name: 'asc',
+            },
+        }),
+
+        this.prisma.product.aggregate({
+            where: {
+                status: ProductStatus.PUBLISHED,
+            },
+            _min: {
+                basePrice: true,
+            },
+            _max: {
+                basePrice: true,
+            },
+        }),
+    ]);
+
+        return {
+            categories: categories.map((category) => ({
+                id: category.id,
+                name: category.name,
+                slug: category.slug,
+                count: category._count.products,
+            })),
+                sizes,
+                colors,
+                    price: {
+                        min: priceRange._min.basePrice,
+                        max: priceRange._max.basePrice,
+                    },
+        };
+    }
+
     findAll(query: FindProductsQueryDto) {
         return this.prisma.product.findMany({
             where: {

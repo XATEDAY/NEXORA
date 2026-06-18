@@ -36,6 +36,11 @@ export class ProductsController {
         return this.productsService.findAll(query);
     }
 
+    @Get('facets')
+    getFacets() {
+        return this.productsService.getFacets();
+    }
+
     @Get(':slug')
     findBySlug(@Param('slug') slug: string){
         return this.productsService.findBySlug(slug);
