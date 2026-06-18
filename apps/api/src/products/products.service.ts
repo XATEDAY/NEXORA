@@ -4,6 +4,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { CreateProductVariantDto } from './dto/create-product-variant.dto';
 import { UpdateProductVariantStockDto } from './dto/update-product-variant-stock.dto';
+import { CreateProductImageDto } from './dto/create-product-image.dto';
 
 @Injectable()
 export class ProductsService {
@@ -190,6 +191,44 @@ export class ProductsService {
         }
 
         return product;
+    }
+
+    async createImage(productId: string, dto: CreateProductImageDto){
+        const product = await this.prisma.product.findFirst({
+            where: {
+                id: productId,
+                status: {
+                    not: ProductStatus.ARCHIVED,
+                },
+            },
+        });
+
+        if(!product){
+            throw new NotFoundException('Product not found or archived');
+        }
+
+        if(dto.isPrimary){
+            await this.prisma.productImage.updateMany({
+                where: {
+                    productId,
+                    isPrimary: true,
+                },
+                data: {
+                    isPrimary: false,
+                },
+            });
+        }
+
+        return this.prisma.productImage.create({
+            data: {
+                productId,
+                url: dto.url,
+                alt: dto.alt,
+                position: dto.position ?? 0,
+                isPrimary: dto.isPrimary ?? false,
+                isActive: true,
+            },
+        });
     }
 
     findAll() {

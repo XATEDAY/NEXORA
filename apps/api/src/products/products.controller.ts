@@ -2,6 +2,7 @@ import { Body, Controller, Get, Param, Patch, Post } from '@nestjs/common';impor
 import { ProductsService } from './products.service';
 import { CreateProductVariantDto } from './dto/create-product-variant.dto';
 import { UpdateProductVariantStockDto } from './dto/update-product-variant-stock.dto';
+import { CreateProductImageDto } from './dto/create-product-image.dto';
 
 @Controller('products')
 export class ProductsController {
@@ -18,6 +19,14 @@ export class ProductsController {
         @Body() CreateProductVariantDto: CreateProductVariantDto,
     ){
         return this.productsService.createVariant(productId, CreateProductVariantDto);
+    }
+
+    @Post(':id/images')
+    createImage(
+        @Param('id') productId: string,
+        @Body() CreateProductImageDto: CreateProductImageDto,
+    ){
+        return this.productsService.createImage(productId, CreateProductImageDto);
     }
 
     @Get()
